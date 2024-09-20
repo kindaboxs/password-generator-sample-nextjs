@@ -5,7 +5,7 @@ import * as React from "react";
 import { CharSetsCheckboxs } from "@/constants";
 import { formGeneratorSchema, FormGeneratorSchemaType } from "@/schemas";
 import { zodResolver } from "@hookform/resolvers/zod";
-import { MinusIcon, PlusIcon } from "lucide-react";
+import { MinusIcon, PlusIcon, RefreshCw } from "lucide-react";
 import { useForm } from "react-hook-form";
 
 import { Button } from "@/components/ui/button";
@@ -26,11 +26,12 @@ import {
   FormLabel,
   FormMessage,
 } from "@/components/ui/form";
+import { Input } from "@/components/ui/input";
 import { Slider } from "@/components/ui/slider";
 
 export const CardPassGen = () => {
   const [passwordLength, setPasswordLength] = React.useState<number>(8);
-  // const [password, setPassword] = React.useState<string>("");
+  const [password, setPassword] = React.useState<string>("");
 
   const minPasswordLength = 1;
   const maxPasswordLength = 50;
@@ -43,9 +44,50 @@ export const CardPassGen = () => {
     },
   });
 
+  const generatePassword = React.useCallback(
+    (length: number, selectedCharSets: string[]): string => {
+      const uppercaseChars = "ABCDEFGHIJKLMNOPQRSTUVWXYZ";
+      const lowercaseChars = "abcdefghijklmnopqrstuvwxyz";
+      const numberChars = "0123456789";
+      const symbolChars = "!@#$%^&*()_+[]{}|;:,.<>?";
+
+      const availableChars = CharSetsCheckboxs.filter((set) =>
+        selectedCharSets.includes(set.id)
+      )
+        .map((set) => set.id)
+        .join("");
+
+      let allCharacters = "";
+      if (availableChars.includes("withUppercase"))
+        allCharacters += uppercaseChars;
+      if (availableChars.includes("withLowercase"))
+        allCharacters += lowercaseChars;
+      if (availableChars.includes("withNumbers")) allCharacters += numberChars;
+      if (availableChars.includes("withSymbols")) allCharacters += symbolChars;
+
+      let generatedPassword = "";
+      for (let i = 0; i < length; i++) {
+        const randomIndex = Math.floor(Math.random() * allCharacters.length);
+        generatedPassword += allCharacters[randomIndex];
+      }
+
+      return generatedPassword;
+    },
+    []
+  );
+
   const onSubmitGenerator = (values: FormGeneratorSchemaType) => {
-    console.log("Generated values:", values);
+    const newPassword = generatePassword(values.length, values.character_sets);
+    setPassword(newPassword);
+    // console.log("Generated password:", newPassword);
   };
+
+  // Automatically regenerate the password when length or char sets change
+  React.useEffect(() => {
+    const { length, character_sets } = form.getValues();
+    const newPassword = generatePassword(length, character_sets);
+    setPassword(newPassword);
+  }, [passwordLength, generatePassword, form]);
 
   return (
     <Card className="w-full max-w-md bg-foreground/5">
@@ -64,10 +106,36 @@ export const CardPassGen = () => {
             onSubmit={form.handleSubmit(onSubmitGenerator)}
             className="space-y-6"
           >
-            <div className="relative h-14 w-full overflow-hidden rounded-lg border border-border bg-background">
-              <p className="absolute inset-0 flex items-center pl-3">
-                password generated
-              </p>
+            <div className="relative h-14 w-full rounded-lg">
+              <div className="flex h-full w-full items-center justify-center space-x-2">
+                <div className="relative flex-grow">
+                  <Input
+                    type="text"
+                    value={password}
+                    readOnly
+                    className="truncate pr-14 focus-visible:ring-0 focus-visible:ring-offset-0"
+                  />
+                  <div className="absolute inset-y-0 right-0 flex items-center pr-3">
+                    {/* <Badge variant="secondary" className="bg-green-500 text-white mr-2">
+              Very strong
+            </Badge> */}
+                    <Button
+                      variant="ghost"
+                      size="icon"
+                      className="h-8 w-8"
+                      onClick={() => {}}
+                    >
+                      <RefreshCw className="h-4 w-4" />
+                    </Button>
+                  </div>
+                </div>
+                <Button
+                  onClick={() => {}}
+                  className="bg-blue-500 text-white hover:bg-blue-600"
+                >
+                  Copy
+                </Button>
+              </div>
             </div>
 
             <FormField
@@ -170,7 +238,7 @@ export const CardPassGen = () => {
                                   }}
                                 />
                               </FormControl>
-                              <FormLabel className="font-normal">
+                              <FormLabel className="cursor-pointer font-normal">
                                 {item.name}
                               </FormLabel>
                             </FormItem>
